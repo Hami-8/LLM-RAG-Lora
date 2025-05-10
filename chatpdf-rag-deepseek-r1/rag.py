@@ -10,6 +10,11 @@ from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain_core.prompts import ChatPromptTemplate
 import logging
 
+from langchain_community.llms import HuggingFacePipeline
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+import torch
+
 set_debug(True)
 set_verbose(True)
 
@@ -20,12 +25,39 @@ logger = logging.getLogger(__name__)
 class ChatPDF:
     """A class for handling PDF ingestion and question answering using RAG."""
 
-    def __init__(self, llm_model: str = "deepseek-r1:latest", embedding_model: str = "mxbai-embed-large"):
-        """
-        Initialize the ChatPDF instance with an LLM and embedding model.
-        """
-        self.model = ChatOllama(model=llm_model)
-        self.embeddings = OllamaEmbeddings(model=embedding_model)
+    # def __init__(self, llm_model: str = "deepseek-r1:latest", embedding_model: str = "mxbai-embed-large"):
+    #     """
+    #     Initialize the ChatPDF instance with an LLM and embedding model.
+    #     """
+    #     self.model = ChatOllama(model=llm_model)
+    #     self.embeddings = OllamaEmbeddings(model=embedding_model)
+    #     self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=100)
+    #     self.prompt = ChatPromptTemplate.from_template(
+    #         """
+    #         You are a helpful assistant answering questions based on the uploaded document.
+    #         Context:
+    #         {context}
+            
+    #         Question:
+    #         {question}
+            
+    #         Answer concisely and accurately in three sentences or less.
+    #         """
+    #     )
+    #     self.vector_store = None
+    #     self.retriever = None
+
+    def __init__(self, llm_model: str = "/root/autodl-tmp/LLM-Research/Meta-Llama-3___1-8B-Instruct", embedding_model: str = "/root/autodl-tmp/mirror013/mxbai-embed-large-v1"):
+        # === 构建本地 HuggingFace 模型 ===
+        tokenizer = AutoTokenizer.from_pretrained(llm_model)
+        model = AutoModelForCausalLM.from_pretrained(llm_model, device_map="auto", torch_dtype=torch.bfloat16).eval()
+        pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=512)
+        self.model = HuggingFacePipeline(pipeline=pipe)
+
+        # === 本地嵌入模型 ===
+        self.embeddings = HuggingFaceEmbeddings(model_name=embedding_model)
+
+        # === 其他原始设置不变 ===
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=100)
         self.prompt = ChatPromptTemplate.from_template(
             """
