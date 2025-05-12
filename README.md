@@ -83,3 +83,23 @@ python train.py
 ```
 python test_QA.py
 ```
+
+### 导出
+
+我们可以把 LoRA 权重 合并进基座模型，导出为一个新的 HuggingFace‑格式模型目录。在 Lora-Llama-3 中运行：
+
+```
+python merge_lora.py
+```
+
+即可将训练后的 LoRA 权重 合并进基座模型，导出的模型在`/root/autodl-tmp/LLM-Research/Meta-Llama-3___1-8B-Instruct_Lora`文件夹中。
+
+## Lora with RAG
+
+进行完上一步 合并Lora权重进基座模型后，我们就可以构建 Lora with RAG 了，只需修改 `./RAG-Llama-3/rag.py`：
+
+```
+# ./RAG-Llama-3/rag.py
+- llm_path: str = "/root/autodl-tmp/LLM-Research/Meta-Llama-3___1-8B-Instruct",
++ llm_path: str = "/root/autodl-tmp/LLM-Research/Meta-Llama-3___1-8B-Instruct_Lora",
+```
