@@ -36,6 +36,7 @@ class ChatPDF:
         logger.info(f"Loading LLM from {llm_path}")
         # 加载 tokenizer 和模型
         tok = AutoTokenizer.from_pretrained(llm_path, use_fast=True)
+        tok.pad_token = "<|eot_id|>"
         model = AutoModelForCausalLM.from_pretrained(
             llm_path,
             torch_dtype=torch.bfloat16,
@@ -46,7 +47,7 @@ class ChatPDF:
             "text-generation",
             model=model,
             tokenizer=tok,
-            max_new_tokens=512,
+            max_new_tokens=200,
             temperature=0.7,
             top_p=0.9,
             eos_token_id=tok.eos_token_id,   # 保证遇到 </s> 就停
@@ -79,6 +80,7 @@ class ChatPDF:
             {question}
 
             Answer concisely and accurately in three sentences or less.
+            End your answer with: <END>
             """
         )
         # 初始化向量数据库和检索器
@@ -130,7 +132,13 @@ class ChatPDF:
             RunnablePassthrough() | self.prompt | self.model | StrOutputParser()
         )
         logger.info("Generating response using the LLM.")
-        return chain.invoke(formatted_input)
+        response = chain.invoke(formatted_input)
+        # 截断 <END>
+        if "<END>" in response:
+            response = response.split("<END>")[0].strip()
+
+        
+        return response
 
     # clear：清除内存中的向量库
     def clear(self):
